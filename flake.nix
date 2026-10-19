@@ -19,7 +19,25 @@
         { pkgs, ... }:
         {
           devShells.default = pkgs.mkShell {
-            packages = with pkgs; [ root ];
+            packages = with pkgs; [
+              root
+              cmake
+              pkg-config
+            ];
+            shellHook = ''
+              printf 'CompileFlags:\n  Add: [-std=c++17, %s]\n' \
+                "$(root-config --cflags | sed 's/ /, /g')" > .clangd
+            '';
+          };
+          packages.scripts = pkgs.stdenv.mkDerivation {
+            src = ./.;
+            pname = "H4l-scripts";
+            version = "0.1";
+            buildInputs = [ pkgs.root ];
+            nativeBuildInputs = with pkgs; [
+              cmake
+              pkg-config
+            ];
           };
         };
     };
