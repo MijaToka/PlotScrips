@@ -9,10 +9,9 @@
 #include <TTree.h>
 #include <TTreeReader.h>
 #include <TTreeReaderValue.h>
-#include <cstddef>
-#include <cstdio>
 #include <filesystem>
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -22,9 +21,8 @@ std::map<std::string, std::string> MC_PATHS = {
 std::map<std::string, std::string> DATA_PATHS = {
     {"2025", "/eos/user/m/mtokarev/samplesHZZ/Data_2025_d25e5b4/"},
 };
-
 // clang-format off
-const std::string MC_dataSets[] = {
+const std::vector<std::string> MC_dataSets = {
     "DYJetsTo2E", "DYJetsTo2Mu", "ggH124", "ggH124p5", "ggH125",
     "ggH125p5", "ggH126", "ggTo2e2mu_Contin_MCFM701", "ggTo2e2tau_Contin_MCFM701",
     "ggTo2mu2tau_Contin_MCFM701", "ggTo4e_Contin_MCFM701", "ggTo4mu_Contin_MCFM701",
@@ -37,12 +35,17 @@ const std::string MC_dataSets[] = {
     "ZH125", "ZH125p5", "ZH126", "ZZTo4l", "ZZZ",
 };
 // clang-format on
-
-std::vector<TFile *> openFiles(std::vector<std::string> fileNames) {
-  std::vector<TFile *> files;
-
-  return files;
-}
+const std::vector<std::string> Data_dataSets = {
+    "EGamma02025Cv1", "EGamma02025Cv2", "EGamma02025Dv1", "EGamma02025Ev1",
+    "EGamma02025Fv1", "EGamma02025Fv2", "EGamma02025Gv1", "EGamma12025Cv1",
+    "EGamma12025Cv2", "EGamma12025Dv1", "EGamma12025Ev1", "EGamma12025Fv1",
+    "EGamma12025Fv2", "EGamma12025Gv1", "Muon02025Cv1",   "Muon02025Cv2",
+    "Muon02025Dv1",   "Muon02025Ev1",   "Muon02025Fv1",   "Muon02025Fv2",
+    "Muon02025Gv1",   "Muon12025Cv1",   "Muon12025Cv2",   "Muon12025Dv1",
+    "Muon12025Ev1",   "Muon12025Fv1",   "Muon12025Fv2",   "Muon12025Gv1",
+    "MuonEG2025Cv1",  "MuonEG2025Cv2",  "MuonEG2025Dv1",  "MuonEG2025Ev1",
+    "MuonEG2025Fv1",  "MuonEG2025Fv2",  "MuonEG2025Gv1",
+};
 
 struct DataSet {
   std::string name;
@@ -105,31 +108,31 @@ void fillHistos(DataSet sample, TFile &outFile) {
     hist->Write();
 }
 
-void runMC(const std::string &period = "2025") {
-  std::string outName = "H4l_MC.root";
-  auto outFile =
-      std::unique_ptr<TFile>(TFile::Open(outName.c_str(), "RECREATE"));
+void run(const bool isMC, const std::string &period = "2025") {
+  TString outName = TString::Format("H4lPlots_%s%s.root", isMC ? "MC" : "Data",
+                                    period.c_str());
+  std::vector<std::string> dataSets = isMC ? MC_dataSets : Data_dataSets;
+  auto INPUT_PATH = isMC ? MC_PATHS : DATA_PATHS;
 
-  DataSet samples[sizeof(MC_dataSets)];
+  auto outFile = std::unique_ptr<TFile>(TFile::Open(outName, "RECREATE"));
 
-  for (size_t i = 0; i < MC_dataSets->size(); i++) {
-    samples[i] =
-        DataSet{.name = MC_dataSets[i],
-                .path = std::filesystem::path(
-                    MC_PATHS[period] + MC_dataSets[i] + "/ZZ4lAnalysis.root")};
-  }
-
-  for (auto &sample : samples) {
+  for (std::string channel : dataSets) {
+    DataSet sample =
+        DataSet{.name = channel,
+                .path = std::filesystem::path(INPUT_PATH[period] + channel +
+                                              "/ZZ4lAnalysis.root")};
     fillHistos(sample, *outFile);
-
-    for (auto histo : histos) {
-      outFile->WriteObject(histo, histo.GetName());
-    }
   }
+  outFile->Close();
 }
+
+void runMC(const std::string &period = "2025") { run(true, period); }
+
+void runData(const std::string &period = "2025") { run(false, period); }
 
 void H4l_Fill(const std::vector<std::string> &years = {"2025"},
               int nEvents = -1) {
   runMC();
+  // runData();
   return;
 }
