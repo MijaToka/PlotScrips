@@ -6,3 +6,5 @@
 /patchLxPlus.sh
 /patches
 /*.root
+/.cache/clangd/index
+/remoteOutputs
