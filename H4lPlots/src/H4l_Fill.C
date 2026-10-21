@@ -117,9 +117,7 @@ void fillHistos(const DataSet &sample, TFile &outFile, const bool &isMC) {
         "eventWeight",
         [genEventSumw](Float_t overallWeight, ROOT::RVecF dataMCWeight,
                        Short_t bestIdx) -> Float_t {
-          if (genEventSumw == 0)
-            return 0.;
-          else if (bestIdx <= 0)
+          if (genEventSumw == 0 || bestIdx == -1)
             return 0.;
           else
             return overallWeight * dataMCWeight[bestIdx] / genEventSumw;
