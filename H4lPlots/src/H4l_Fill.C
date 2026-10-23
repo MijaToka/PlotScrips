@@ -268,7 +268,9 @@ void runData(const std::string &period = "2025") { run<false>(period); }
 
 void H4l_Fill(const std::vector<std::string> &years = {"2025"},
               int nEvents = -1) {
-  runMC();
-  runData();
+  for (std::string year : years) {
+    runMC(year);
+    runData(year);
+  }
   return;
 }
