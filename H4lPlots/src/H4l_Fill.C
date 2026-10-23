@@ -67,7 +67,7 @@ Float_t get_genEventSumwSample(const std::vector<std::string> &files) {
   for (auto const &file : files) {
     Float_t curr;
     genEventSumw += get_genEventSumw(file);
-    printf("File %s's eventSumw=%f\n", file.c_str(), genEventSumw);
+    printf("\tFile %s's eventSumw=%f\n", file.c_str(), genEventSumw);
   }
   return genEventSumw;
 }
@@ -136,7 +136,7 @@ const HistogramBinning binGranularities[] = {
     HistogramBinning{.GeVVal = 10, .nBins = 93, .xlow = 70., .xhigh = 1000.}};
 
 const std::map<std::string, std::string> labelPerVariable = {
-    {"ZZMass", "m_{#it{4l}}"}, {"Z1mass", "m_{Z_1}"}, {"Z2Mass", "m_{Z_2}"}};
+    {"ZZMass", "m_{#it{4l}}"}, {"Z1Mass", "m_{Z_1}"}, {"Z2Mass", "m_{Z_2}"}};
 
 struct HistogramModel {
   ROOT::RDF::TH1DModel model;
@@ -153,19 +153,7 @@ makeModel(const std::string &variable, const std::string &sampleName,
   TString modelName = TString::Format("%s_%iGeV_%s", variable.c_str(),
                                       binning.GeVVal, sampleName.c_str());
 
-  HistogramModel histogram{
-      .model = ROOT::RDF::TH1DModel(
-          modelName,
-          TString::Format("%s;%s;Events / %i GeV", modelName.Data(),
-                          xlabel.c_str(), binning.GeVVal),
-          binning.nBins, binning.xlow, binning.xhigh),
-      .variable = variable,
-  };
-
   if (fsFlav.has_value()) {
-    histogram.filter =
-        TString::Format("FSflav==static_cast<Int_t>(%i)", fsFlav.value());
-
     switch (fsFlav.value()) {
     case FinalStateFlavor::E4:
       modelName += "_4e";
@@ -179,6 +167,19 @@ makeModel(const std::string &variable, const std::string &sampleName,
     }
   }
 
+  HistogramModel histogram{
+      .model = ROOT::RDF::TH1DModel(
+          modelName,
+          TString::Format("%s;%s;Events / %i GeV", modelName.Data(),
+                          xlabel.c_str(), binning.GeVVal),
+          binning.nBins, binning.xlow, binning.xhigh),
+      .variable = variable,
+  };
+
+  if (fsFlav.has_value())
+    histogram.filter =
+        TString::Format("FSflav==static_cast<Int_t>(%i)", fsFlav.value());
+
   return histogram;
 }
 
@@ -190,6 +191,10 @@ initializeHistogramModels(const std::string &sampleName) {
     for (HistogramBinning binning : binGranularities) {
       auto currModel = makeModel(variable, sampleName, xlabel, binning);
       models.push_back(currModel);
+      for (FinalStateFlavor fsFlav : fsFlavors) {
+        currModel = makeModel(variable, sampleName, xlabel, binning, fsFlav);
+        models.push_back(currModel);
+      }
     }
 
   return models;
@@ -214,7 +219,7 @@ template <bool isMC> void fillHistos(const DataSet &sample, TFile &outFile) {
   for (auto model : histoModels) {
     auto selection = df;
     if (model.filter.has_value())
-      selection = selection.Filter(model.filter.value());
+      selection = selection.Filter(model.filter.value().Data());
 
     auto hist = selection.Histo1D(model.model, model.variable, "eventWeight");
     histograms.push_back(hist);
@@ -241,7 +246,7 @@ template <bool isMC> void run(const std::string &period = "2025") {
   auto INPUT_PATH = isMC ? MC_PATHS : DATA_PATHS;
   auto outFile = std::unique_ptr<TFile>(TFile::Open(outName, "RECREATE"));
 
-  printf("Output will be printed to %s\n", outName.Data());
+  printf("Output will be saved to %s\n", outName.Data());
 
   for (std::string channel : dataSets) {
     DataSet sample =

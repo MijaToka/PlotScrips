@@ -95,4 +95,7 @@ const std::array<const char *, 35> Data_dataSets =
 
 enum class FinalStateFlavor { E4 = 14641, E2Mu2 = 20449, Mu4 = 28561 };
 
+constexpr FinalStateFlavor fsFlavors[] = {
+    FinalStateFlavor::E4, FinalStateFlavor::E2Mu2, FinalStateFlavor::Mu4};
+
 #endif
